@@ -1,0 +1,10 @@
+mysql/data/*
+nginx/logs/*
+php-fpm/logs/*
+!.gitkeep
+.env
+*.local
+*.local.yml
+.docker-sync
+php-fpm/conf.d/docker-*
+php-fpm/php-fpm.d/*

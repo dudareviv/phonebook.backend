@@ -1,0 +1,115 @@
+version: '3.5'
+
+
+### Networks Setup ###########################################
+networks:
+    main:
+        name: ${PROJECT_PREFIX}-network
+
+
+
+### Volumes Setup ###########################################
+volumes:
+    mysql:
+        driver: "local"
+
+
+services:
+
+    ### PHP-FPM Container #######################################
+    app:
+        container_name: ${PROJECT_PREFIX}-app
+        build:
+            context: ./php-fpm
+            args:
+                PHP_XDEBUG_ENABLED: ${PHP_XDEBUG_ENABLED}
+        environment:
+            XDEBUG_CONFIG: remote_enable=1 remote_host=${PHP_XDEBUG_REMOTE_HOST} remote_port=${PHP_XDEBUG_REMOTE_PORT}
+            PHP_IDE_CONFIG: serverName=app.local
+        depends_on:
+            - mysql
+            - rabbitmq
+            - memcached
+        links:
+            - mysql
+            - rabbitmq
+            - memcached
+        expose:
+            - "9000"
+        networks:
+            - main
+        volumes:
+            - ../src:/app:rw,cached
+            - ./app/logs:/var/log/app:delegated
+            - ./app/conf.d/php.ini:/usr/local/etc/php/conf.d/php.ini:delegated
+
+    ### Nginx Server Container ##################################
+    nginx:
+        container_name: ${PROJECT_PREFIX}-nginx
+        image: nginx
+        depends_on:
+            - app
+            - memcached
+        volumes:
+            - ../src:/app:rw,cached
+            - ./nginx/logs:/var/log/nginx:delegated
+            - ./nginx/conf/sites/:/etc/nginx/conf.d:delegated
+        ports:
+            - "80:80"
+            - "443:443"
+        command: ["nginx", "-g", "daemon off;"]
+        links:
+            - app
+        networks:
+            - main
+
+
+    ### Memcached Container #########################################
+    memcached:
+        container_name: ${PROJECT_PREFIX}-memcached
+        image: memcached
+        ports:
+            - "11211:11211"
+        networks:
+            - main
+
+
+    ### MySQL Container #########################################
+    mysql:
+        container_name: ${PROJECT_PREFIX}-mysql
+        hostname: "mysql"
+        image: mysql:5.7
+        volumes:
+            - ./mysql/data:/var/lib/mysql:delegated
+            - ./mysql/conf/my.cnf:/etc/mysql/my.cnf:delegated
+        restart: always
+        environment:
+            MYSQL_ROOT_PASSWORD: root
+            MYSQL_DATABASE: app
+            MYSQL_USER: user
+            MYSQL_PASSWORD: password
+        command: [mysqld, --character-set-server=utf8mb4, --collation-server=utf8mb4_unicode_ci]
+        ports:
+            - "3306:3306"
+        networks:
+            - main
+
+    ### RabbitMQ Container #########################################
+    rabbitmq:
+        container_name: ${PROJECT_PREFIX}-rabbitmq
+        image: "rabbitmq:3-management"
+        hostname: "rabbitmq"
+        volumes:
+            - "./rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins"
+        environment:
+            RABBITMQ_ERLANG_COOKIE: "SWQOKODSQALRPCLNMEQG"
+            RABBITMQ_DEFAULT_USER: "rabbitmq"
+            RABBITMQ_DEFAULT_PASS: "rabbitmq"
+            RABBITMQ_DEFAULT_VHOST: "/"
+        ports:
+            # Used by AMQP 0-9-1 and 1.0 clients without and with TLS
+            - "5672:5672"
+            # Web interface
+            - "15672:15672"
+        networks:
+            - main
