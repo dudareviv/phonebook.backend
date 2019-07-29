@@ -1,0 +1,17 @@
+api_platform:
+    eager_loading:
+        enabled: true
+        force_eager: false
+
+    mapping:
+        paths:
+            - '%kernel.project_dir%/src/Entity'
+            - '%kernel.project_dir%/config/api_platform/resources.yaml'
+
+    swagger:
+        api_keys:
+            apiKey:
+                name: Authorization
+                type: header
+
+    enable_fos_user: true
