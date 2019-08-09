@@ -1,0 +1,38 @@
+resources:
+
+    App\Entity\Contact:
+
+        collectionOperations:
+            get:
+                method: 'GET'
+                normalization_context:
+                    groups:
+                        - contact:view
+            post:
+                method: 'POST'
+                normalization_context:
+                    groups:
+                        - contact:view
+                denormalization_context:
+                    object_to_populate: 'App\Entity\User'
+                    groups:
+                        - contact:create
+
+        itemOperations:
+            get:
+                method: 'GET'
+                normalization_context:
+                    force_eager: true
+                    enable_max_depth: true
+                    groups:
+                        - contact:list
+            put:
+                method: 'PUT'
+                normalization_context:
+                    groups:
+                        - contact:view
+                denormalization_context:
+                    groups:
+                        - contact:update
+            delete:
+                method: 'DELETE'
